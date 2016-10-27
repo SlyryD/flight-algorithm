@@ -10,7 +10,6 @@ key = ""
 def read_key():
 	with open("key", "r") as h:
 		key = h.read().strip()
-	pdb.set_trace()
 
 
 origins = { "SEA": ["SEA"], "WAS": ["DCA", "IAD", "BWI"], "PIT": ["PIT"], "PVD": ["PVD", "BOS"], "MSP": ["MSP"], "NYC": ["LGA", "EWR", "JFK"], "DEN": ["DEN"]}
