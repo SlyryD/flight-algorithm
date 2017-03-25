@@ -5,12 +5,14 @@ import re
 import requests
 
 
-origins = { "SEA": ["SEA"], "WAS": ["DCA", "IAD", "BWI"], "PIT": ["PIT"], "PVD": ["PVD", "BOS"], "MSP": ["MSP"], "NYC": ["LGA", "EWR", "JFK"], "DEN": ["DEN"]}
-destinations = { "Colorado": ["DEN"], "Seattle": ["SEA"], "San Francisco": ["SFO", "SJC"], "LA": ["LAX"], "San Diego": ["SAN"], "Maryland": ["DCA", "IAD", "BWI"], "New York": ["LGA", "EWR", "JFK"] }
+origins = { "SEA": ["SEA"], "WAS": ["WAS"], "PIT": ["PIT"], "PVD": ["PVD", "BOS"], "MSP": ["MSP"], "NYC": ["NYC"], "DEN": ["DEN"]}
+# destinations = { "Colorado": ["DEN"], "Seattle": ["SEA"], "San Francisco": ["SFO", "SJC"], "LA": ["LAX"], "San Diego": ["SAN"], "Maryland": ["DCA", "IAD", "BWI"], "New York": ["LGA", "EWR", "JFK"] }
+destinations = { "Toronto": ["YHM"] }
 
 
 def get_key():
 	key = ""
+	# with open("key_rebecca", "r") as h:
 	with open("key", "r") as h:
 		key = h.read().strip()
 	return key
@@ -29,7 +31,7 @@ def get_price(response):
 	return -1
 
 
-def make_request(origin, destination, outbounddate="2017-02-17", returndate="2017-02-19"):
+def make_request(origin, destination, outbounddate="2017-02-17", returndate="2017-02-20"):
 	# Build one request
 	searchurl = "https://www.googleapis.com/qpxExpress/v1/trips/search"
 
@@ -65,6 +67,7 @@ def main():
 	total_prices = {}
 	min_prices = {}
 	prices = {}
+	responses = {}
 	for dest, destairports in destinations.iteritems():
 		print "Prices for flights to", dest
 		min_prices[dest] = {} # Min prices for dest
@@ -74,16 +77,19 @@ def main():
 			for destination in destairports:
 				if destination not in prices:
 					prices[destination] = {} # Prices for destination
+				if destination not in responses:
+					responses[destination] = {} # Responses for destination
 				for origin in origairports:
-					if destination == origin:
-						price = 0.0 # Price for destination-origin pair
-					else:
+					price = 0.0
+					response = "_NO_RESPONSE_"
+					if destination != origin:
 						response = make_request(origin, destination)
+						# pdb.set_trace()
 						price = get_price(response)
-						# price = random.randint(0, 100)
 					if price >= 0.0 and price < min_price:
 						min_price = price
 					prices[destination][origin] = price
+					responses[destination][origin] = response
 			min_prices[dest][orig] = min_price
 			print orig, "=", ("%.2f" % min_price), "({})".format(",".join([origin for origin in origairports]))
 			total_price += min_price
@@ -103,6 +109,14 @@ def main():
 		h.write(",{},Total\n".format(",".join(origs)))
 		for dest in dests:
 			h.write("{},{},{}\n".format(dest, ",".join(get_row(min_prices[dest], origs)), total_prices[dest]))
+
+	dests = [airport for lst in destinations.values() for airport in lst]
+	origs = [airport for lst in origins.values()      for airport in lst]
+	with open('responses.csv', 'a') as h:
+		h.write("origin,destination,response\n")
+		for dest in dests:
+			for orig in origs:
+				h.write("{},{},{}\n".format(orig, dest, str(responses[dest][orig]).replace(",", "__COMMA__")))
 
 
 if __name__ == '__main__':
