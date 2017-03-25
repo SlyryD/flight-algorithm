@@ -5,8 +5,28 @@ import re
 import requests
 
 
-origins = { "SEA": ["SEA"], "WAS": ["DCA", "IAD", "BWI"], "PIT": ["PIT"], "PVD": ["PVD", "BOS"], "MSP": ["MSP"], "NYC": ["LGA", "EWR", "JFK"], "DEN": ["DEN"]}
-destinations = { "Colorado": ["DEN"], "Seattle": ["SEA"], "San Francisco": ["SFO", "SJC"], "LA": ["LAX"], "San Diego": ["SAN"], "Maryland": ["DCA", "IAD", "BWI"], "New York": ["LGA", "EWR", "JFK"] }
+def get_dict_from_file(places_dict, places_file):
+	with open(places_file, "r") as h:
+		curr_key = "Unknown"
+		for line in h:
+			stripped_line = line.strip()
+			if stripped_line == "":
+				continue
+			elif stripped_line[0] == '+':
+				place = stripped_line[1:].strip()
+				places_dict[curr_key].append(place)
+			else:
+				curr_key = stripped_line
+				places_dict[curr_key] = []
+	return places_dict
+
+
+def get_origins():
+	return get_dict_from_file({}, "origins.txt")
+
+
+def get_destinations():
+	return get_dict_from_file({}, "destinations.txt")
 
 
 def get_key():
@@ -29,7 +49,7 @@ def get_price(response):
 	return -1
 
 
-def make_request(origin, destination, outbounddate="2017-02-17", returndate="2017-02-19"):
+def make_request(origin, destination, outbounddate="2017-04-28", returndate="2017-04-30"):
 	# Build one request
 	searchurl = "https://www.googleapis.com/qpxExpress/v1/trips/search"
 
@@ -65,6 +85,8 @@ def main():
 	total_prices = {}
 	min_prices = {}
 	prices = {}
+	origins = get_origins()
+	destinations = get_destinations()
 	for dest, destairports in destinations.iteritems():
 		print "Prices for flights to", dest
 		min_prices[dest] = {} # Min prices for dest
@@ -79,6 +101,7 @@ def main():
 						price = 0.0 # Price for destination-origin pair
 					else:
 						response = make_request(origin, destination)
+						pdb.set_trace()
 						price = get_price(response)
 						# price = random.randint(0, 100)
 					if price >= 0.0 and price < min_price:
