@@ -3,6 +3,10 @@ import pdb
 import random
 import re
 import requests
+import sys
+
+from datetime import date
+from datetime import timedelta
 
 
 def get_dict_from_file(places_dict, places_file):
@@ -21,12 +25,12 @@ def get_dict_from_file(places_dict, places_file):
 	return places_dict
 
 
-def get_origins():
-	return get_dict_from_file({}, "origins.txt")
+def get_origins(origins_file):
+	return get_dict_from_file({}, origins_file)
 
 
-def get_destinations():
-	return get_dict_from_file({}, "destinations.txt")
+def get_destinations(destinations_file):
+	return get_dict_from_file({}, destinations_file)
 
 
 def get_key():
@@ -49,7 +53,7 @@ def get_price(response):
 	return -1
 
 
-def make_request(origin, destination, outbounddate="2017-04-28", returndate="2017-04-30"):
+def make_request(origin, destination, outbounddate, returndate):
 	# Build one request
 	searchurl = "https://www.googleapis.com/qpxExpress/v1/trips/search"
 
@@ -81,13 +85,73 @@ def get_row(prices_dest, origs):
 		yield ("%.2f" % prices_dest[orig])
 
 
+def get_arguments(args):
+	key_file = "key"
+	origins_file = "origins.txt"
+	destinations_file = "destinations.txt"
+	start_date = (date.today() + timedelta(16)).strftime("%Y-%m-%d") # Magic number
+	end_date = (date.today() + timedelta(20)).strftime("%Y-%m-%d") # Magic number
+
+	i = 0
+	while (i < len(args)):
+		if args[i] == "-key":
+			if i >= len(args) - 1:
+				print_arguments_message_and_exit()
+			key_file = str(args[i + 1])
+			i += 1
+		elif args[i] == "-origins":
+			if i >= len(args) - 1:
+				print_arguments_message_and_exit()
+			origins_file = str(args[i + 1])
+			i += 1
+		elif args[i] == "-destinations":
+			if i >= len(args) - 1:
+				print_arguments_message_and_exit()
+			destinations_file = str(args[i + 1])
+			i += 1
+		elif args[i] == "-start":
+			if i >= len(args) - 1:
+				print_arguments_message_and_exit()
+			start_date = str(args[i + 1])
+			i += 1
+		elif args[i] == "-end":
+			if i >= len(args) - 1:
+				print_arguments_message_and_exit()
+			end_date = str(args[i + 1])
+			i += 1
+		i += 1
+
+	return (key_file, origins_file, destinations_file, start_date, end_date)
+
+
+def print_arguments_message_and_exit():
+	print "Unable to parse command line arguments"
+	print "Valid example:"
+	print "    python flights-algorithm.py -start 2017-04-28 -end 2017-04-30 -key key -origins origins.txt -destinations destinations.txt"
+	sys.exit()
+
+
 def main():
-	origins = get_origins()
-	destinations = get_destinations()
+	# Get command line arguments
+	(key_file, origins_file, destinations_file, start_date, end_date) = get_arguments(sys.argv)
+
+	# Parse origins and destinations files
+	origins = get_origins(origins_file)
+	destinations = get_destinations(destinations_file)
+
+	# Print parameters
+	print "Start date = {}".format(start_date)
+	print "End date = {}".format(end_date)
+	print "Origins = {}".format(origins.keys())
+	print "Destinations = {}".format(destinations.keys())
+
+	# Create dictionaries to store response information (written to files in working directory)
 	total_prices = {}
 	min_prices = {}
 	prices = {}
 	responses = {}
+
+	# Make requests for pairs of airports
 	for dest, destairports in destinations.iteritems():
 		print "Prices for flights to", dest
 		min_prices[dest] = {} # Min prices for dest
@@ -103,7 +167,7 @@ def main():
 					price = 0.0
 					response = "_NO_RESPONSE_"
 					if destination != origin:
-						response = make_request(origin, destination)
+						response = make_request(origin, destination, start_date, end_date)
 						# pdb.set_trace()
 						price = get_price(response)
 					if price >= 0.0 and price < min_price:
@@ -136,7 +200,7 @@ def main():
 		h.write("origin,destination,response\n")
 		for dest in dests:
 			for orig in origs:
-				h.write("{},{},{}\n".format(orig, dest, str(responses[dest][orig]).replace(",", "__COMMA__")))
+				h.write("{},{},{}\n".format(orig, dest, str(responses[dest][orig]).replace(",", ";")))
 
 
 if __name__ == '__main__':
