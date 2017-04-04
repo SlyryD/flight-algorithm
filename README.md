@@ -29,7 +29,7 @@ New York
 Seattle
 +SEA
 ```
-### Destinations file (-origins)
+### Destinations file (-destinations)
 This file should contain named destinations followed by lists of airport codes prefixed with "+".
 
 Example:
